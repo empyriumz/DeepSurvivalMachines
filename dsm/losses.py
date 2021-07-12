@@ -78,8 +78,8 @@ def _lognormal_loss(model, t, e, risk="1"):
 
         mu = k_[:, g]
         sigma = b_[:, g]
-        # f = -torch.log(t) - sigma - 0.5 * np.log(2 * np.pi)
-        f = -sigma - 0.5 * np.log(2 * np.pi)
+        f = -torch.log(t) - sigma - 0.5 * np.log(2 * np.pi)
+        # f = -sigma - 0.5 * np.log(2 * np.pi)
         f = f - torch.div((torch.log(t) - mu) ** 2, 2.0 * torch.exp(2 * sigma))
         s = torch.div(torch.log(t) - mu, torch.exp(sigma) * np.sqrt(2))
         s = 0.5 - 0.5 * torch.erf(s)
@@ -199,7 +199,7 @@ def _conditional_lognormal_loss(model, x, t, e, elbo=True, risk="1"):
         mu = k_[:, g]
         sigma = b_[:, g]
         # \sigma = \exp(\beta)
-        # TODO: fix the equations
+        # TODO: fix the equation for f
         # f = - sigma - 0.5 * np.log(2 * np.pi)
         f = -torch.log(t) - sigma - 0.5 * np.log(2 * np.pi)
         f = f - torch.div((torch.log(t) - mu) ** 2, 2.0 * torch.exp(2 * sigma))
