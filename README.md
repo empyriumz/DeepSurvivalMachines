@@ -45,13 +45,18 @@ parametric distributions. The parameters of these mixture distributions as
 well as the mixing weights are modelled using Neural Networks.
 
 #### Usage Example
-    >>> from dsm import DeepSurvivalMachines
-    >>> model = DeepSurvivalMachines()
-    >>> model.fit()
-    >>> model.predict_risk()
+
+```python
+from dsm import DeepSurvivalMachines
+model = DeepSurvivalMachines()
+model.fit()
+model.predict_risk()
+```
 
 Recurrent Deep Survival Machines
 --------------------------------
+<img width=80% src=https://ndownloader.figshare.com/files/28329918>
+
 
 **Recurrent Deep Survival Machines (RDSM)** builds on the original **DSM**
 model and allows for learning of representations of the input covariates using
