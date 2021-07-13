@@ -275,7 +275,7 @@ class DSMBase:
     """
 
         if self.fitted:
-            return 1 - self.predict_survival(x, t, risk=str(risk))
+            return 1 - self.predict_survival(x, t, risk=str(risk))[0]
         else:
             raise Exception(
                 "The model has not been fitted yet. Please fit the "
@@ -302,8 +302,9 @@ class DSMBase:
         if not isinstance(t, list):
             t = [t]
         if self.fitted:
-            scores = losses.predict_cdf(self.torch_model, x, t, risk=str(risk), device=self.device)
-            return np.exp(np.array(scores)).T
+            scores, std = losses.predict_cdf(self.torch_model, x, t, risk=str(risk), device=self.device)
+            #return np.exp(np.array(scores)).T
+            return np.array(scores).T, std
         else:
             raise Exception(
                 "The model has not been fitted yet. Please fit the "

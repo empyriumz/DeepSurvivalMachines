@@ -30,9 +30,9 @@ model = DeepSurvivalMachines(k = 3,
                             device = device)
 # The fit method is called to train the model
 model.fit(x_train, t_train, e_train, iters = 50, batch_size = 2048, learning_rate = 1e-2, weight_decay=1e-3)
-out_survival = model.predict_survival(x_test, times)
+out_survival, std = model.predict_survival(x_test, times)
 out_risk = model.predict_risk(x_test, times)
-# print(out_survival)
+print(out_survival, std)
 from sksurv.metrics import concordance_index_ipcw, brier_score, cumulative_dynamic_auc
 
 cis = []

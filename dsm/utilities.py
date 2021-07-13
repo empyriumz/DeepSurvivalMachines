@@ -187,7 +187,7 @@ def train_dsm(
         valid_loss = 0
         for r in range(model.risks):
             valid_loss += conditional_loss(
-                model, x_valid, t_valid_, e_valid_, elbo=False, risk=str(r + 1)
+                model, x_valid, t_valid_, e_valid_, elbo=True, risk=str(r + 1)
             )
 
         valid_loss = valid_loss.detach().cpu().numpy()

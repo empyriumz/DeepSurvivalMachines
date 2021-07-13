@@ -249,7 +249,6 @@ def _conditional_weibull_loss(model, x, t, e, elbo=True, risk="1"):
 
     lossf = []
     losss = []
-    #loss_l2 = []
     for g in range(model.k):
 
         k = k_[:, g]
@@ -260,34 +259,27 @@ def _conditional_weibull_loss(model, x, t, e, elbo=True, risk="1"):
         # b = -\log(\beta), k = \log \eta
         f = k + b + ((torch.exp(k) - 1) * (b + torch.log(t)))
         f = f + s
-        #l2_loss = - l2 * (k * k + b * b)
         lossf.append(f)
         losss.append(s)
-        #loss_l2.append(l2_loss)
 
     losss = torch.stack(losss, dim=1)
     lossf = torch.stack(lossf, dim=1)
-    #loss_l2 = torch.stack(loss_l2, dim=1)
 
     if elbo:
 
         lossg = nn.Softmax(dim=1)(logits)
         losss = lossg * losss
         lossf = lossg * lossf
-        #loss_l2 = lossg * loss_l2
         losss = losss.sum(dim=1)
         lossf = lossf.sum(dim=1)
-        #loss_l2 = loss_l2.sum(dim=1)
 
     else:
 
         lossg = nn.LogSoftmax(dim=1)(logits)
         losss = lossg + losss
         lossf = lossg + lossf
-        #loss_l2 = lossg + loss_l2
         losss = torch.logsumexp(losss, dim=1)
         lossf = torch.logsumexp(lossf, dim=1)
-        #loss_l2 = torch.logsumexp(loss_l2, dim=1)
 
     uncens = np.where(e.cpu().data.numpy() == int(risk))[0]
     cens = np.where(e.cpu().data.numpy() != int(risk))[0]
@@ -347,10 +339,10 @@ def _weibull_pdf(model, x, t_horizon, risk="1", device='cpu'):
 
 
 def _weibull_cdf(model, x, t_horizon, risk="1", device='cpu'):
-
-    squish = nn.LogSoftmax(dim=1)
-
+    
     shape, scale, logits = model.forward(x, risk)
+    # squish = nn.LogSoftmax(dim=1)
+    squish = nn.Softmax(dim=1)
     logits = squish(logits)
 
     k_ = shape
@@ -360,6 +352,7 @@ def _weibull_cdf(model, x, t_horizon, risk="1", device='cpu'):
     t_horz = t_horz.repeat(shape.shape[0], 1)
 
     cdfs = []
+    cdf_std = []
     for j in range(len(t_horizon)):
 
         t = t_horz[:, j]
@@ -375,13 +368,17 @@ def _weibull_cdf(model, x, t_horizon, risk="1", device='cpu'):
             lcdfs.append(s)
         
         # torch.logsumexp((logits[:, 0]+lcdfs[0]).view(-1, 1), dim=1)
-        lcdfs = torch.stack(lcdfs, dim=1)
-        lcdfs = lcdfs + logits
-        lcdfs = torch.logsumexp(lcdfs, dim=1)
-        cdfs.append(lcdfs.detach().cpu().numpy())
-        
-
-    return cdfs
+        lcdfs = torch.exp(torch.stack(lcdfs, dim=1))
+        # lcdfs = lcdfs + logits
+        #lcdfs = logits * lcdfs
+        #lcdfs = torch.logsumexp(logits * lcdfs, dim=1)
+        weighted_lcdfs = (logits * lcdfs).sum(dim=1)
+        weighted_std = torch.sqrt((logits * (lcdfs - weighted_lcdfs.view(-1, 1))**2).sum(dim=1))
+        # cdfs.append(lcdfs.detach().cpu().numpy())
+        cdfs.append(weighted_lcdfs.detach().cpu().numpy())
+        cdf_std.append(weighted_std.detach().cpu().numpy())
+    
+    return cdfs, cdf_std
 
 
 def _weibull_mean(model, x, risk="1"):
