@@ -100,6 +100,7 @@ def _weibull_loss(model, t, e, risk="1"):
     b_ = scale.expand(t.shape[0], -1)
 
     ll = 0.0
+
     for g in range(model.k):
 
         k = k_[:, g]
@@ -107,8 +108,8 @@ def _weibull_loss(model, t, e, risk="1"):
 
         s = -(torch.pow(torch.exp(b) * t, torch.exp(k)))
         f = k + b + ((torch.exp(k) - 1) * (b + torch.log(t)))
-        # f = f + s
-
+        f = f + s
+        #l2_loss = - l2 * (k * k + b * b)
         uncens = np.where(e.cpu().data.numpy() == int(risk))[0]
         cens = np.where(e.cpu().data.numpy() != int(risk))[0]
         ll += f[uncens].sum() + s[cens].sum()
@@ -198,7 +199,7 @@ def _conditional_lognormal_loss(model, x, t, e, elbo=True, risk="1"):
 
         mu = k_[:, g]
         sigma = b_[:, g]
-        # \sigma = \exp(\beta)
+        # \beta = \exp(\sigma)
         # TODO: fix the equation for f
         # f = - sigma - 0.5 * np.log(2 * np.pi)
         f = -torch.log(t) - sigma - 0.5 * np.log(2 * np.pi)
@@ -248,7 +249,7 @@ def _conditional_weibull_loss(model, x, t, e, elbo=True, risk="1"):
 
     lossf = []
     losss = []
-
+    #loss_l2 = []
     for g in range(model.k):
 
         k = k_[:, g]
@@ -257,32 +258,36 @@ def _conditional_weibull_loss(model, x, t, e, elbo=True, risk="1"):
         s = -(torch.pow(torch.exp(b) * t, torch.exp(k)))
         # Taking log? YES
         # b = -\log(\beta), k = \log \eta
-        # f is PDF, s is CDF
-        # why adding f and s?
         f = k + b + ((torch.exp(k) - 1) * (b + torch.log(t)))
-        # f = f + s
-
+        f = f + s
+        #l2_loss = - l2 * (k * k + b * b)
         lossf.append(f)
         losss.append(s)
+        #loss_l2.append(l2_loss)
 
     losss = torch.stack(losss, dim=1)
     lossf = torch.stack(lossf, dim=1)
+    #loss_l2 = torch.stack(loss_l2, dim=1)
 
     if elbo:
 
         lossg = nn.Softmax(dim=1)(logits)
         losss = lossg * losss
         lossf = lossg * lossf
+        #loss_l2 = lossg * loss_l2
         losss = losss.sum(dim=1)
         lossf = lossf.sum(dim=1)
+        #loss_l2 = loss_l2.sum(dim=1)
 
     else:
 
         lossg = nn.LogSoftmax(dim=1)(logits)
         losss = lossg + losss
         lossf = lossg + lossf
+        #loss_l2 = lossg + loss_l2
         losss = torch.logsumexp(losss, dim=1)
         lossf = torch.logsumexp(lossf, dim=1)
+        #loss_l2 = torch.logsumexp(loss_l2, dim=1)
 
     uncens = np.where(e.cpu().data.numpy() == int(risk))[0]
     cens = np.where(e.cpu().data.numpy() != int(risk))[0]
@@ -294,11 +299,11 @@ def _conditional_weibull_loss(model, x, t, e, elbo=True, risk="1"):
 def conditional_loss(model, x, t, e, elbo=True, risk="1"):
 
     if model.dist == "Weibull":
-        return _conditional_weibull_loss(model, x, t, e, elbo, risk)
+        return _conditional_weibull_loss(model, x, t, e, elbo, risk=risk)
     elif model.dist == "LogNormal":
-        return _conditional_lognormal_loss(model, x, t, e, elbo, risk)
+        return _conditional_lognormal_loss(model, x, t, e, elbo, risk=risk)
     elif model.dist == "Normal":
-        return _conditional_normal_loss(model, x, t, e, elbo, risk)
+        return _conditional_normal_loss(model, x, t, e, elbo, risk=risk)
     else:
         raise NotImplementedError(
             "Distribution: " + model.dist + " not implemented yet."
@@ -330,7 +335,7 @@ def _weibull_pdf(model, x, t_horizon, risk="1", device='cpu'):
             b = b_[:, g]
             s = -(torch.pow(torch.exp(b) * t, torch.exp(k)))
             f = k + b + ((torch.exp(k) - 1) * (b + torch.log(t)))
-            # f = f + s
+            f = f + s
             lpdfs.append(f)
 
         lpdfs = torch.stack(lpdfs, dim=1)

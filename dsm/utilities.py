@@ -37,14 +37,14 @@ import gc
 import logging
 
 
-def get_optimizer(model, lr):
+def get_optimizer(model, lr, weight_decay=1e-5):
 
     if model.optimizer == "Adam":
-        return torch.optim.Adam(model.parameters(), lr=lr)
+        return torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     elif model.optimizer == "SGD":
-        return torch.optim.SGD(model.parameters(), lr=lr)
+        return torch.optim.SGD(model.parameters(), lr=lr, weight_decay=weight_decay)
     elif model.optimizer == "RMSProp":
-        return torch.optim.RMSprop(model.parameters(), lr=lr)
+        return torch.optim.RMSprop(model.parameters(), lr=lr, weight_decay=weight_decay)
     else:
         raise NotImplementedError(
             "Optimizer " + model.optimizer + " is not implemented"
@@ -52,7 +52,7 @@ def get_optimizer(model, lr):
 
 
 def pretrain_dsm(
-    model, t_train, e_train, t_valid, e_valid, n_iter=10000, lr=1e-2, thres=1e-4,
+    model, t_train, e_train, t_valid, e_valid, n_iter=10000, lr=1e-2, weight_decay=1e-5, thres=1e-4,
     device='cpu'):
 
     premodel = DeepSurvivalMachinesTorch(
@@ -60,7 +60,7 @@ def pretrain_dsm(
     ).to(device)
     premodel.float()
 
-    optimizer = get_optimizer(premodel, lr)
+    optimizer = get_optimizer(premodel, lr, weight_decay=weight_decay)
 
     oldcost = float("inf")
     patience = 0
@@ -70,13 +70,13 @@ def pretrain_dsm(
         optimizer.zero_grad()
         loss = 0
         for r in range(model.risks):
-            loss += unconditional_loss(premodel, t_train, e_train, str(r + 1))
+            loss += unconditional_loss(premodel, t_train, e_train, risk=str(r + 1))
         loss.backward()
         optimizer.step()
 
         valid_loss = 0
         for r in range(model.risks):
-            valid_loss += unconditional_loss(premodel, t_valid, e_valid, str(r + 1))
+            valid_loss += unconditional_loss(premodel, t_valid, e_valid, risk=str(r + 1))
         valid_loss = valid_loss.detach().cpu().numpy()
         costs.append(valid_loss)
         if np.abs(costs[-1] - oldcost) < thres:
@@ -124,6 +124,7 @@ def train_dsm(
     e_valid,
     n_iter=10,
     lr=1e-3,
+    weight_decay=1e-5,
     elbo=True,
     bs=128,
     device='cpu'
@@ -139,7 +140,7 @@ def train_dsm(
     e_valid_ = _reshape_tensor_with_nans(e_valid)
 
     premodel = pretrain_dsm(
-        model, t_train_, e_train_, t_valid_, e_valid_, n_iter=10000, lr=1e-2, thres=1e-4,
+        model, t_train_, e_train_, t_valid_, e_valid_, n_iter=10000, lr=1e-2, weight_decay=weight_decay, thres=1e-4,
         device=device)
 
     for r in range(model.risks):
@@ -147,7 +148,7 @@ def train_dsm(
         model.scale[str(r + 1)].data.fill_(float(premodel.scale[str(r + 1)]))
 
     model.float()
-    optimizer = get_optimizer(model, lr)
+    optimizer = get_optimizer(model, lr, weight_decay=weight_decay)
 
     patience = 0
     oldcost = float("inf")
@@ -180,6 +181,7 @@ def train_dsm(
                 )
             # print ("Train Loss:", loss.item())
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
 
         valid_loss = 0

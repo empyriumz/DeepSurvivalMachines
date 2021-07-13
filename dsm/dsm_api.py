@@ -84,6 +84,7 @@ class DSMBase:
         val_data=None,
         iters=1,
         learning_rate=1e-3,
+        weight_decay=1e-5,
         batch_size=128,
         elbo=True,
         optimizer="Adam",
@@ -149,6 +150,7 @@ class DSMBase:
             e_val,
             n_iter=iters,
             lr=learning_rate,
+            weight_decay=weight_decay,
             elbo=elbo,
             bs=batch_size,
             device=self.device
