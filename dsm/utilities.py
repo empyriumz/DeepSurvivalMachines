@@ -138,7 +138,7 @@ def train_dsm(
     e_train_ = _reshape_tensor_with_nans(e_train)
     t_valid_ = _reshape_tensor_with_nans(t_valid)
     e_valid_ = _reshape_tensor_with_nans(e_valid)
-
+    # pre-train is for finding initial shape parameters, no x_rep is involved
     premodel = pretrain_dsm(
         model, t_train_, e_train_, t_valid_, e_valid_, n_iter=10000, lr=1e-2, weight_decay=weight_decay, thres=1e-4,
         device=device)
@@ -159,6 +159,7 @@ def train_dsm(
     costs = []
     i = 0
     for i in tqdm(range(n_iter)):
+        epoch_loss = []
         for j in range(nbatches):
 
             xb = x_train[j * bs : (j + 1) * bs]
@@ -179,11 +180,13 @@ def train_dsm(
                     elbo=elbo,
                     risk=str(r + 1),
                 )
-            # print ("Train Loss:", loss.item())
+            #print ("Train Loss:", loss.item())           
             loss.backward()
+            epoch_loss.append(loss.item())
+            #print(model.gate['1'][0].weight.grad)
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
-
+        print ("Epoch {} train loss:".format(i), np.mean(epoch_loss))   
         valid_loss = 0
         for r in range(model.risks):
             valid_loss += conditional_loss(
@@ -191,7 +194,7 @@ def train_dsm(
             )
 
         valid_loss = valid_loss.detach().cpu().numpy()
-        print("validation loss: {:.4f}".format(valid_loss))
+        print("Epoch {} validation loss: {:.4f}".format(i, valid_loss))
         costs.append(float(valid_loss))
         dics.append(deepcopy(model.state_dict()))
 

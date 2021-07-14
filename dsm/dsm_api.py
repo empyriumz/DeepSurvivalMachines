@@ -304,7 +304,7 @@ class DSMBase:
         if self.fitted:
             scores, std = losses.predict_cdf(self.torch_model, x, t, risk=str(risk), device=self.device)
             #return np.exp(np.array(scores)).T
-            return np.array(scores).T, std
+            return np.array(scores).T, np.array(std).T
         else:
             raise Exception(
                 "The model has not been fitted yet. Please fit the "

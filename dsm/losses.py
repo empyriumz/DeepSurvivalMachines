@@ -109,7 +109,6 @@ def _weibull_loss(model, t, e, risk="1"):
         s = -(torch.pow(torch.exp(b) * t, torch.exp(k)))
         f = k + b + ((torch.exp(k) - 1) * (b + torch.log(t)))
         f = f + s
-        #l2_loss = - l2 * (k * k + b * b)
         uncens = np.where(e.cpu().data.numpy() == int(risk))[0]
         cens = np.where(e.cpu().data.numpy() != int(risk))[0]
         ll += f[uncens].sum() + s[cens].sum()
@@ -341,7 +340,6 @@ def _weibull_pdf(model, x, t_horizon, risk="1", device='cpu'):
 def _weibull_cdf(model, x, t_horizon, risk="1", device='cpu'):
     
     shape, scale, logits = model.forward(x, risk)
-    # squish = nn.LogSoftmax(dim=1)
     squish = nn.Softmax(dim=1)
     logits = squish(logits)
 
@@ -362,19 +360,11 @@ def _weibull_cdf(model, x, t_horizon, risk="1", device='cpu'):
             k = k_[:, g]
             b = b_[:, g]
             s = -(torch.pow(torch.exp(b) * t, torch.exp(k)))
-            # break down the calculation into k individual values:
-            # s = s + logits[:, g]
-            # s = torch.logsumexp(s.view(-1 ,1), dim=1)
             lcdfs.append(s)
         
-        # torch.logsumexp((logits[:, 0]+lcdfs[0]).view(-1, 1), dim=1)
         lcdfs = torch.exp(torch.stack(lcdfs, dim=1))
-        # lcdfs = lcdfs + logits
-        #lcdfs = logits * lcdfs
-        #lcdfs = torch.logsumexp(logits * lcdfs, dim=1)
         weighted_lcdfs = (logits * lcdfs).sum(dim=1)
         weighted_std = torch.sqrt((logits * (lcdfs - weighted_lcdfs.view(-1, 1))**2).sum(dim=1))
-        # cdfs.append(lcdfs.detach().cpu().numpy())
         cdfs.append(weighted_lcdfs.detach().cpu().numpy())
         cdf_std.append(weighted_std.detach().cpu().numpy())
     
@@ -411,7 +401,7 @@ def _weibull_mean(model, x, risk="1"):
 
 def _lognormal_cdf(model, x, t_horizon, risk="1", device='cpu'):
 
-    squish = nn.LogSoftmax(dim=1)
+    squish = nn.Softmax(dim=1)
 
     shape, scale, logits = model.forward(x, risk)
     logits = squish(logits)
@@ -423,7 +413,7 @@ def _lognormal_cdf(model, x, t_horizon, risk="1", device='cpu'):
     t_horz = t_horz.repeat(shape.shape[0], 1)
 
     cdfs = []
-
+    cdf_std = []
     for j in range(len(t_horizon)):
 
         t = t_horz[:, j]
@@ -439,12 +429,13 @@ def _lognormal_cdf(model, x, t_horizon, risk="1", device='cpu'):
             s = torch.log(s)
             lcdfs.append(s)
 
-        lcdfs = torch.stack(lcdfs, dim=1)
-        lcdfs = lcdfs + logits
-        lcdfs = torch.logsumexp(lcdfs, dim=1)
-        cdfs.append(lcdfs.detach().cpu().numpy())
-
-    return cdfs
+        lcdfs = torch.exp(torch.stack(lcdfs, dim=1))
+        weighted_lcdfs = (logits * lcdfs).sum(dim=1)
+        weighted_std = torch.sqrt((logits * (lcdfs - weighted_lcdfs.view(-1, 1))**2).sum(dim=1))
+        cdfs.append(weighted_lcdfs.detach().cpu().numpy())
+        cdf_std.append(weighted_std.detach().cpu().numpy())
+    
+    return cdfs, cdf_std
 
 
 def _normal_cdf(model, x, t_horizon, risk="1", device='cpu'):
