@@ -157,7 +157,6 @@ def train_dsm(
 
     dics = []
     costs = []
-    i = 0
     for i in tqdm(range(n_iter)):
         epoch_loss = []
         for j in range(nbatches):
@@ -179,8 +178,7 @@ def train_dsm(
                     _reshape_tensor_with_nans(eb),
                     elbo=elbo,
                     risk=str(r + 1),
-                )
-            #print ("Train Loss:", loss.item())           
+                )     
             loss.backward()
             epoch_loss.append(loss.item())
             #print(model.gate['1'][0].weight.grad)
@@ -206,7 +204,7 @@ def train_dsm(
                 del dics
                 gc.collect()
 
-                return model, i
+                return model
             else:
                 patience += 1
         else:
@@ -220,4 +218,4 @@ def train_dsm(
     del dics
     gc.collect()
 
-    return model, i
+    return model

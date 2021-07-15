@@ -52,7 +52,7 @@ class DSMBase:
     """Base Class for all DSM models"""
 
     def __init__(
-        self, k=3, layers=None, distribution="Weibull", temp=1000.0, discount=1.0,
+        self, k=3, layers=None, distribution="Weibull", temp=10.0, discount=1.0,
         device='cpu'):
         self.k = k
         self.layers = layers
@@ -128,7 +128,9 @@ class DSMBase:
             x, t, e, vsize, val_data, random_state
         )
         x_train, t_train, e_train, x_val, t_val, e_val = processed_data
-
+        self.lr = learning_rate
+        self.weight_decay = weight_decay
+        self.batch_size = batch_size
         # Todo: Change this somehow. The base design shouldn't depend on child
         if type(self).__name__ in [
             "DeepConvolutionalSurvivalMachines",
@@ -140,7 +142,7 @@ class DSMBase:
 
         maxrisk = int(np.nanmax(e_train.cpu().numpy()))
         model = self._gen_torch_model(inputdim, optimizer, risks=maxrisk)
-        model, _ = train_dsm(
+        model = train_dsm(
             model,
             x_train,
             t_train,
@@ -149,13 +151,12 @@ class DSMBase:
             t_val,
             e_val,
             n_iter=iters,
-            lr=learning_rate,
-            weight_decay=weight_decay,
+            lr=self.lr,
+            weight_decay=self.weight_decay,
             elbo=elbo,
-            bs=batch_size,
+            bs=self.batch_size,
             device=self.device
         )
-
         self.torch_model = model.eval()
         self.fitted = True
 
@@ -199,6 +200,7 @@ class DSMBase:
                     self.torch_model, x_val, t_val, e_val, elbo=False, risk=str(r + 1)
                 )
                 .detach()
+                .cpu()
                 .numpy()
             )
         return loss
