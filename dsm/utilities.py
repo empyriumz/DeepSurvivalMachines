@@ -52,8 +52,17 @@ def get_optimizer(model, lr, weight_decay=1e-5):
 
 
 def pretrain_dsm(
-    model, t_train, e_train, t_valid, e_valid, n_iter=10000, lr=1e-2, weight_decay=1e-5, thres=1e-4,
-    device='cpu'):
+    model,
+    t_train,
+    e_train,
+    t_valid,
+    e_valid,
+    n_iter=10000,
+    lr=1e-2,
+    weight_decay=1e-5,
+    thres=1e-4,
+    device="cpu",
+):
 
     premodel = DeepSurvivalMachinesTorch(
         1, 1, dist=model.dist, risks=model.risks, optimizer=model.optimizer
@@ -76,7 +85,9 @@ def pretrain_dsm(
 
         valid_loss = 0
         for r in range(model.risks):
-            valid_loss += unconditional_loss(premodel, t_valid, e_valid, risk=str(r + 1))
+            valid_loss += unconditional_loss(
+                premodel, t_valid, e_valid, risk=str(r + 1)
+            )
         valid_loss = valid_loss.detach().cpu().numpy()
         costs.append(valid_loss)
         if np.abs(costs[-1] - oldcost) < thres:
@@ -127,7 +138,7 @@ def train_dsm(
     weight_decay=1e-5,
     elbo=True,
     bs=128,
-    device='cpu'
+    device="cpu",
 ):
     """Function to train the torch instance of the model."""
 
@@ -140,8 +151,17 @@ def train_dsm(
     e_valid_ = _reshape_tensor_with_nans(e_valid)
     # pre-train is for finding initial shape parameters, no x_rep is involved
     premodel = pretrain_dsm(
-        model, t_train_, e_train_, t_valid_, e_valid_, n_iter=10000, lr=1e-2, weight_decay=weight_decay, thres=1e-4,
-        device=device)
+        model,
+        t_train_,
+        e_train_,
+        t_valid_,
+        e_valid_,
+        n_iter=10000,
+        lr=1e-2,
+        weight_decay=weight_decay,
+        thres=1e-4,
+        device=device,
+    )
 
     for r in range(model.risks):
         model.shape[str(r + 1)].data.fill_(float(premodel.shape[str(r + 1)]))
@@ -178,13 +198,13 @@ def train_dsm(
                     _reshape_tensor_with_nans(eb),
                     elbo=elbo,
                     risk=str(r + 1),
-                )     
+                )
             loss.backward()
             epoch_loss.append(loss.item())
-            #print(model.gate['1'][0].weight.grad)
+            # print(model.gate['1'][0].weight.grad)
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
-        print ("Epoch {} train loss:".format(i), np.mean(epoch_loss))   
+        print("Epoch {} train loss:".format(i), np.mean(epoch_loss))
         valid_loss = 0
         for r in range(model.risks):
             valid_loss += conditional_loss(

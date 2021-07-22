@@ -52,8 +52,14 @@ class DSMBase:
     """Base Class for all DSM models"""
 
     def __init__(
-        self, k=3, layers=None, distribution="Weibull", temp=10.0, discount=1.0,
-        device='cpu'):
+        self,
+        k=3,
+        layers=None,
+        distribution="Weibull",
+        temp=1.0,
+        discount=1.0,
+        device="cpu",
+    ):
         self.k = k
         self.layers = layers
         self.dist = distribution
@@ -155,7 +161,7 @@ class DSMBase:
             weight_decay=self.weight_decay,
             elbo=elbo,
             bs=self.batch_size,
-            device=self.device
+            device=self.device,
         )
         self.torch_model = model.eval()
         self.fitted = True
@@ -304,8 +310,9 @@ class DSMBase:
         if not isinstance(t, list):
             t = [t]
         if self.fitted:
-            scores, std = losses.predict_cdf(self.torch_model, x, t, risk=str(risk), device=self.device)
-            #return np.exp(np.array(scores)).T
+            scores, std = losses.predict_cdf(
+                self.torch_model, x, t, risk=str(risk), device=self.device
+            )
             return np.array(scores).T, np.array(std).T
         else:
             raise Exception(
@@ -419,15 +426,22 @@ class DeepRecurrentSurvivalMachines(DSMBase):
         layers=None,
         hidden=None,
         distribution="Weibull",
-        temp=1000.0,
+        temp=1.0,
         discount=1.0,
         typ="LSTM",
+        device="cpu",
     ):
         super(DeepRecurrentSurvivalMachines, self).__init__(
-            k=k, layers=layers, distribution=distribution, temp=temp, discount=discount
+            k=k,
+            layers=layers,
+            distribution=distribution,
+            temp=temp,
+            discount=discount,
+            device=device,
         )
         self.hidden = hidden
         self.typ = typ
+        self.device = device
 
     def _gen_torch_model(self, inputdim, optimizer, risks):
         """Helper function to return a torch model."""
@@ -442,10 +456,10 @@ class DeepRecurrentSurvivalMachines(DSMBase):
             optimizer=optimizer,
             typ=self.typ,
             risks=risks,
-        )
+        ).to(self.device)
 
     def _prepocess_test_data(self, x):
-        return torch.from_numpy(_get_padded_features(x))
+        return torch.from_numpy(_get_padded_features(x)).float().to(self.device)
 
     def _prepocess_training_data(self, x, t, e, vsize, val_data, random_state):
         """RNNs require different preprocessing for variable length sequences"""
@@ -460,9 +474,9 @@ class DeepRecurrentSurvivalMachines(DSMBase):
 
         x_train, t_train, e_train = x[idx], t[idx], e[idx]
 
-        x_train = torch.from_numpy(x_train).float()
-        t_train = torch.from_numpy(t_train).float()
-        e_train = torch.from_numpy(e_train).float()
+        x_train = torch.from_numpy(x_train).float().to(self.device)
+        t_train = torch.from_numpy(t_train).float().to(self.device)
+        e_train = torch.from_numpy(e_train).float().to(self.device)
 
         if val_data is None:
 
@@ -482,9 +496,9 @@ class DeepRecurrentSurvivalMachines(DSMBase):
             t_val = _get_padded_features(t_val)
             e_val = _get_padded_features(e_val)
 
-            x_val = torch.from_numpy(x_val).float()
-            t_val = torch.from_numpy(t_val).float()
-            e_val = torch.from_numpy(e_val).float()
+            x_val = torch.from_numpy(x_val).float().to(self.device)
+            t_val = torch.from_numpy(t_val).float().to(self.device)
+            e_val = torch.from_numpy(e_val).float().to(self.device)
 
         return (x_train, t_train, e_train, x_val, t_val, e_val)
 
@@ -501,7 +515,7 @@ class DeepConvolutionalSurvivalMachines(DSMBase):
         layers=None,
         hidden=None,
         distribution="Weibull",
-        temp=1000.0,
+        temp=1.0,
         discount=1.0,
         typ="ConvNet",
     ):
@@ -539,7 +553,7 @@ class DeepCNNRNNSurvivalMachines(DeepRecurrentSurvivalMachines):
         layers=None,
         hidden=None,
         distribution="Weibull",
-        temp=1000.0,
+        temp=1.0,
         discount=1.0,
         typ="LSTM",
     ):

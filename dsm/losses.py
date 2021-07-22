@@ -301,7 +301,7 @@ def conditional_loss(model, x, t, e, elbo=True, risk="1"):
         )
 
 
-def _weibull_pdf(model, x, t_horizon, risk="1", device='cpu'):
+def _weibull_pdf(model, x, t_horizon, risk="1", device="cpu"):
 
     squish = nn.LogSoftmax(dim=1)
 
@@ -337,8 +337,8 @@ def _weibull_pdf(model, x, t_horizon, risk="1", device='cpu'):
     return pdfs
 
 
-def _weibull_cdf(model, x, t_horizon, risk="1", device='cpu'):
-    
+def _weibull_cdf(model, x, t_horizon, risk="1", device="cpu"):
+
     shape, scale, logits = model.forward(x, risk)
     squish = nn.Softmax(dim=1)
     logits = squish(logits)
@@ -361,13 +361,15 @@ def _weibull_cdf(model, x, t_horizon, risk="1", device='cpu'):
             b = b_[:, g]
             s = -(torch.pow(torch.exp(b) * t, torch.exp(k)))
             lcdfs.append(s)
-        
+
         lcdfs = torch.exp(torch.stack(lcdfs, dim=1))
         weighted_lcdfs = (logits * lcdfs).sum(dim=1)
-        weighted_std = torch.sqrt((logits * (lcdfs - weighted_lcdfs.view(-1, 1))**2).sum(dim=1))
+        weighted_std = torch.sqrt(
+            (logits * (lcdfs - weighted_lcdfs.view(-1, 1)) ** 2).sum(dim=1)
+        )
         cdfs.append(weighted_lcdfs.detach().cpu().numpy())
         cdf_std.append(weighted_std.detach().cpu().numpy())
-    
+
     return cdfs, cdf_std
 
 
@@ -399,7 +401,7 @@ def _weibull_mean(model, x, risk="1"):
     return torch.exp(lmeans).detach().cpu().numpy()
 
 
-def _lognormal_cdf(model, x, t_horizon, risk="1", device='cpu'):
+def _lognormal_cdf(model, x, t_horizon, risk="1", device="cpu"):
 
     squish = nn.Softmax(dim=1)
 
@@ -431,14 +433,16 @@ def _lognormal_cdf(model, x, t_horizon, risk="1", device='cpu'):
 
         lcdfs = torch.exp(torch.stack(lcdfs, dim=1))
         weighted_lcdfs = (logits * lcdfs).sum(dim=1)
-        weighted_std = torch.sqrt((logits * (lcdfs - weighted_lcdfs.view(-1, 1))**2).sum(dim=1))
+        weighted_std = torch.sqrt(
+            (logits * (lcdfs - weighted_lcdfs.view(-1, 1)) ** 2).sum(dim=1)
+        )
         cdfs.append(weighted_lcdfs.detach().cpu().numpy())
         cdf_std.append(weighted_std.detach().cpu().numpy())
-    
+
     return cdfs, cdf_std
 
 
-def _normal_cdf(model, x, t_horizon, risk="1", device='cpu'):
+def _normal_cdf(model, x, t_horizon, risk="1", device="cpu"):
 
     squish = nn.LogSoftmax(dim=1)
 
@@ -511,7 +515,7 @@ def predict_mean(model, x, risk="1"):
         )
 
 
-def predict_pdf(model, x, t_horizon, risk="1", device='cpu'):
+def predict_pdf(model, x, t_horizon, risk="1", device="cpu"):
     torch.no_grad()
     if model.dist == "Weibull":
         return _weibull_pdf(model, x, t_horizon, risk, device)
@@ -525,7 +529,7 @@ def predict_pdf(model, x, t_horizon, risk="1", device='cpu'):
         )
 
 
-def predict_cdf(model, x, t_horizon, risk="1", device='cpu'):
+def predict_cdf(model, x, t_horizon, risk="1", device="cpu"):
     torch.no_grad()
     if model.dist == "Weibull":
         return _weibull_cdf(model, x, t_horizon, risk, device)

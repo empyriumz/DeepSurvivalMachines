@@ -213,10 +213,10 @@ class DeepSurvivalMachinesTorch(nn.Module):
         k,
         layers=None,
         dist="Weibull",
-        temp=1000.0,
+        temp=1.0,
         discount=1.0,
         optimizer="Adam",
-        risks=1
+        risks=1,
     ):
         super(DeepSurvivalMachinesTorch, self).__init__()
 
@@ -310,7 +310,7 @@ class DeepRecurrentSurvivalMachinesTorch(DeepSurvivalMachinesTorch):
         layers=1,
         hidden=None,
         dist="Weibull",
-        temp=1000.0,
+        temp=1.0,
         discount=1.0,
         optimizer="Adam",
         risks=1,
@@ -478,7 +478,7 @@ class DeepConvolutionalSurvivalMachinesTorch(DeepSurvivalMachinesTorch):
         embedding=None,
         hidden=None,
         dist="Weibull",
-        temp=1000.0,
+        temp=1.0,
         discount=1.0,
         optimizer="Adam",
         risks=1,
@@ -572,7 +572,7 @@ class DeepCNNRNNSurvivalMachinesTorch(DeepRecurrentSurvivalMachinesTorch):
         layers=1,
         hidden=None,
         dist="Weibull",
-        temp=1000.0,
+        temp=1.0,
         discount=1.0,
         optimizer="Adam",
         risks=1,
