@@ -130,7 +130,7 @@ class DSMBase:
 
     """
 
-        processed_data = self._prepocess_training_data(
+        processed_data = self._preprocess_training_data(
             x, t, e, vsize, val_data, random_state
         )
         x_train, t_train, e_train, x_val, t_val, e_val = processed_data
@@ -148,7 +148,7 @@ class DSMBase:
 
         maxrisk = int(np.nanmax(e_train.cpu().numpy()))
         model = self._gen_torch_model(inputdim, optimizer, risks=maxrisk)
-        model = train_dsm(
+        model, self.min_loss = train_dsm(
             model,
             x_train,
             t_train,
@@ -192,7 +192,7 @@ class DSMBase:
                 + "model using the `fit` method on some training data "
                 + "before calling `_eval_nll`."
             )
-        processed_data = self._prepocess_training_data(x, t, e, 0, None, 0)
+        processed_data = self._preprocess_training_data(x, t, e, 0, None, 0)
         _, _, _, x_val, t_val, e_val = processed_data
         x_val, t_val, e_val = (
             x_val,
@@ -211,10 +211,10 @@ class DSMBase:
             )
         return loss
 
-    def _prepocess_test_data(self, x):
+    def _preprocess_test_data(self, x):
         return torch.from_numpy(x).float().to(self.device)
 
-    def _prepocess_training_data(self, x, t, e, vsize, val_data, random_state):
+    def _preprocess_training_data(self, x, t, e, vsize, val_data, random_state):
 
         idx = list(range(x.shape[0]))
         np.random.seed(random_state)
@@ -256,7 +256,7 @@ class DSMBase:
     """
 
         if self.fitted:
-            x = self._prepocess_test_data(x)
+            x = self._preprocess_test_data(x)
             scores = losses.predict_mean(self.torch_model, x, risk=str(risk))
             return scores
         else:
@@ -306,7 +306,7 @@ class DSMBase:
       np.array: numpy array of the survival probabilites at each time in t.
 
     """
-        x = self._prepocess_test_data(x)
+        x = self._preprocess_test_data(x)
         if not isinstance(t, list):
             t = [t]
         if self.fitted:
@@ -336,7 +336,7 @@ class DSMBase:
       np.array: numpy array of the estimated pdf at each time in t.
 
     """
-        x = self._prepocess_test_data(x)
+        x = self._preprocess_test_data(x)
         if not isinstance(t, list):
             t = [t]
         if self.fitted:
@@ -458,10 +458,10 @@ class DeepRecurrentSurvivalMachines(DSMBase):
             risks=risks,
         ).to(self.device)
 
-    def _prepocess_test_data(self, x):
+    def _preprocess_test_data(self, x):
         return torch.from_numpy(_get_padded_features(x)).float().to(self.device)
 
-    def _prepocess_training_data(self, x, t, e, vsize, val_data, random_state):
+    def _preprocess_training_data(self, x, t, e, vsize, val_data, random_state):
         """RNNs require different preprocessing for variable length sequences"""
 
         idx = list(range(x.shape[0]))

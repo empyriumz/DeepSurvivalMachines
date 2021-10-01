@@ -35,7 +35,6 @@ Note: NOT DESIGNED TO BE CALLED DIRECTLY!!!
 
 import torch.nn as nn
 import torch
-import numpy as np
 
 __pdoc__ = {}
 
